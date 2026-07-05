@@ -1,58 +1,47 @@
 # 479Property+
 
-**479Property+** is a modern, enterprise-grade, cloud-based Property Management and Revenue Tracking platform built for property owners, estate managers, real estate companies, and facility management organizations.
+**479Property+** is a modern, enterprise-grade, cloud-based Property Management and Revenue Tracking platform for property owners, estate managers, real estate companies, and facility management organizations.
 
-This repository is a monorepo containing the API, the web client, and the shared packages that power the platform.
+This is a **pnpm + Turborepo** monorepo containing the API, the web client, and shared packages.
 
 ---
 
 ## Tech Stack
 
-**Frontend** — React · TypeScript · Vite · Tailwind CSS · shadcn/ui · TanStack Query · TanStack Table · React Hook Form · Zod · React Router
+**Frontend** — React · Vite · TypeScript · Tailwind CSS · shadcn/ui · TanStack Query · TanStack Table · React Hook Form · Zod · React Router
 **Backend** — NestJS · TypeScript · Prisma ORM · PostgreSQL
-**Auth** — JWT (access + refresh) · RBAC · permission-based authorization
-**Infrastructure** — Docker · Redis · BullMQ · Cloudinary · AWS S3
-**Maps** — Google Maps API
-**Charts** — Recharts
-**Testing** — Jest · Vitest · Playwright
-**Tooling** — pnpm workspaces · Turborepo
+**Infra** — Docker · Redis · BullMQ · Cloudinary · AWS S3
+**Tooling** — pnpm workspaces · Turborepo · ESLint · Prettier · Husky · lint-staged · EditorConfig
+**CI** — GitHub Actions (install · lint · build)
 
 ---
 
-## Monorepo Structure
+## Structure
 
 ```
 479PropertyPlus/
 ├── apps/
-│   ├── api/          # NestJS backend (REST API, auth, business logic)
-│   └── web/          # React + Vite frontend
+│   ├── api/            # NestJS backend
+│   └── web/            # React + Vite frontend
 ├── packages/
-│   ├── ui/           # Shared UI component library (shadcn/ui based)
-│   ├── utils/        # Shared utilities & helpers
-│   ├── config/       # Shared config (eslint, tsconfig, tailwind presets)
-│   └── types/        # Shared TypeScript types & contracts
-├── database/         # Prisma schema, migrations, seed scripts
-├── docker/           # Dockerfiles & docker-compose definitions
-├── docs/             # Architecture & product documentation
-└── .github/          # CI/CD workflows
+│   ├── ui/             # Shared React component library (shadcn/ui based)
+│   ├── types/          # Shared TypeScript types & contracts
+│   ├── utils/          # Shared framework-agnostic utilities
+│   └── config/         # Shared ESLint + TypeScript presets
+├── database/
+│   └── prisma/         # Prisma schema & migrations
+├── docker/             # docker-compose (PostgreSQL + Redis)
+├── docs/               # Documentation
+└── .github/workflows/  # CI pipeline
 ```
-
----
-
-## Architecture Highlights
-
-- **Multi-tenancy:** shared database with row-level isolation. Every tenant-scoped record carries an `organizationId`, enforced centrally so queries cannot cross tenant boundaries.
-- **Layered backend:** strict separation of Controller → Service → Repository, with DTOs, entities, validators, and interfaces kept distinct. No business logic in controllers.
-- **Security-first:** every endpoint authenticated and authorized, all inputs validated, passwords hashed, sensitive data encrypted, audit logging, and rate limiting.
-- **Auditable data:** `createdAt`, `updatedAt`, `createdBy`, `updatedBy`, `organizationId`, and soft deletes where appropriate.
 
 ---
 
 ## Prerequisites
 
 - Node.js 20+
-- pnpm 9+
-- Docker & Docker Compose (for PostgreSQL and Redis)
+- pnpm 9+ (`corepack enable && corepack prepare pnpm@9.15.0 --activate`)
+- Docker & Docker Compose
 
 ---
 
@@ -63,45 +52,53 @@ This repository is a monorepo containing the API, the web client, and the shared
 pnpm install
 
 # 2. Configure environment
-cp .env.example .env
-# then edit .env and fill in real values
+cp .env.example .env      # then edit values
 
-# 3. Start infrastructure (PostgreSQL, Redis)
-docker compose -f docker/docker-compose.yml up -d
+# 3. Start infrastructure
+pnpm docker:up            # PostgreSQL + Redis
 
-# 4. Apply database migrations & generate the Prisma client
-pnpm --filter api prisma migrate dev
+# 4. Generate the Prisma client
+pnpm prisma:generate
 
 # 5. Run everything in dev mode
 pnpm dev
 ```
 
+- Web dev server: http://localhost:5173
+- API: http://localhost:3000/api (health check at `/api/health`)
+
 ---
 
-## Common Scripts
+## Workspace Scripts
 
-> Exact script names are finalized as the workspaces are scaffolded; the table
-> below reflects the intended developer workflow.
+| Command                 | Description                                   |
+| ----------------------- | --------------------------------------------- |
+| `pnpm dev`              | Run all apps in watch mode (Turborepo)        |
+| `pnpm build`            | Build all packages and apps                   |
+| `pnpm lint`             | Lint the whole workspace                      |
+| `pnpm typecheck`        | Type-check the whole workspace                |
+| `pnpm test`             | Run tests                                     |
+| `pnpm format`           | Format with Prettier                          |
+| `pnpm prisma:generate`  | Generate the Prisma client                    |
+| `pnpm prisma:migrate`   | Create/apply a dev migration                  |
+| `pnpm docker:up` / `:down` | Start / stop local infrastructure          |
 
-| Command                     | Description                                  |
-| --------------------------- | -------------------------------------------- |
-| `pnpm dev`                  | Run all apps in development mode             |
-| `pnpm build`                | Build all apps and packages                  |
-| `pnpm lint`                 | Lint the entire workspace                    |
-| `pnpm test`                 | Run unit tests                               |
-| `pnpm test:e2e`             | Run end-to-end tests (Playwright)            |
-| `pnpm --filter api ...`     | Target the API workspace                     |
-| `pnpm --filter web ...`     | Target the web workspace                     |
+Target a single workspace with `--filter`, e.g. `pnpm --filter @479property/web dev`.
+
+---
+
+## Conventions
+
+Engineering rules, architectural decisions, and coding standards live in
+[`CLAUDE.md`](./CLAUDE.md). Read it before contributing.
+
+- Multi-tenancy: shared database, row-level isolation via `organizationId`.
+- Backend layering: Controller → Service → Repository (no business logic in controllers).
+- Every feature ships validation, error handling, logging, authorization, docs, and tests.
 
 ---
 
 ## Status
 
-Early development. The platform core (organizations, users, authentication, RBAC/permissions, tenant scoping) is the current foundation; feature modules build on top of it.
-
----
-
-## Roles
-
-- **Product Owner:** Uthman
-- **Engineering:** implementation follows the architecture defined in [`CLAUDE.md`](./CLAUDE.md).
+Foundation only. No business modules, authentication, or database tables yet —
+the scaffold is ready for feature development.

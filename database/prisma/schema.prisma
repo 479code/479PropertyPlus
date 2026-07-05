@@ -1,0 +1,14 @@
+// 479Property+ — Prisma schema
+// Setup only. Domain models (Organization, User, Role, Permission, etc.)
+// are added as feature modules are built.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Domain models will be defined below ──────────────────────────────

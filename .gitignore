@@ -98,3 +98,6 @@ docker-compose.override.yml
 tmp/
 temp/
 *.tmp
+
+# ---- Prisma generated client (regenerated via `prisma generate`) ----
+database/prisma/generated/

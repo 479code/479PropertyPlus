@@ -1,0 +1,15 @@
+{
+  "extends": "@479property/config/tsconfig/nest",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "baseUrl": "./",
+    "incremental": true,
+    "types": ["node", "jest"],
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "test"]
+}

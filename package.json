@@ -1,0 +1,46 @@
+{
+  "name": "479propertyplus",
+  "version": "0.1.0",
+  "private": true,
+  "description": "479Property+ — enterprise property management & revenue tracking platform (monorepo).",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint -- --fix",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "clean": "turbo run clean && rimraf node_modules",
+    "prisma:generate": "pnpm --filter @479property/api prisma:generate",
+    "prisma:migrate": "pnpm --filter @479property/api prisma:migrate",
+    "prisma:studio": "pnpm --filter @479property/api prisma:studio",
+    "docker:up": "docker compose -f docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f docker/docker-compose.yml down",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@479property/config": "workspace:*",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.3.0",
+    "prettier": "^3.4.2",
+    "rimraf": "^6.0.1",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,md,yml,yaml,css}": [
+      "prettier --write"
+    ]
+  }
+}

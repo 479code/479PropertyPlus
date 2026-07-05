@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "479Property+ base",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": false,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "@479property/ui": ["packages/ui/src"],
+      "@479property/ui/*": ["packages/ui/src/*"],
+      "@479property/types": ["packages/types/src"],
+      "@479property/utils": ["packages/utils/src"],
+      "@479property/config/*": ["packages/config/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist", "build"]
+}
