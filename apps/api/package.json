@@ -7,9 +7,9 @@
     "schema": "../../database/prisma/schema.prisma"
   },
   "scripts": {
-    "dev": "nest start --watch",
+    "dev": "tsc-watch -p tsconfig.build.json --onSuccess \"node dist/main.js\"",
     "start": "node dist/main.js",
-    "build": "nest build",
+    "build": "tsc -p tsconfig.build.json",
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "jest --passWithNoTests",
@@ -27,6 +27,8 @@
     "@nestjs/core": "^10.4.15",
     "@nestjs/platform-express": "^10.4.15",
     "@prisma/client": "^6.1.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
@@ -46,6 +48,7 @@
     "ts-jest": "^29.2.5",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
+    "tsc-watch": "^7.2.1",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.2"
   }
