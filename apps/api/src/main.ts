@@ -1,6 +1,7 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 import { AppModule } from './app.module';
 
@@ -18,8 +19,18 @@ async function bootstrap(): Promise<void> {
   );
   app.enableCors({ origin: corsOrigins === '*' ? true : corsOrigins.split(',') });
 
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('479Property+ API')
+    .setDescription('Enterprise property management platform API')
+    .setVersion('0.1.0')
+    .addServer(`/${globalPrefix}`)
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup(`${globalPrefix}/docs`, app, document);
+
   await app.listen(port);
   Logger.log(`API running on http://localhost:${port}/${globalPrefix}`, 'Bootstrap');
+  Logger.log(`Swagger docs on http://localhost:${port}/${globalPrefix}/docs`, 'Bootstrap');
 }
 
 void bootstrap();

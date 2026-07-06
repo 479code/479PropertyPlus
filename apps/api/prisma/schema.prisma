@@ -1,6 +1,5 @@
 // 479Property+ — Prisma schema
-// Setup only. Domain models (Organization, User, Role, Permission, etc.)
-// are added as feature modules are built.
+// Milestone 002.5: System Configuration Engine (+ tenant-root models it depends on).
 
 generator client {
   provider = "prisma-client-js"
@@ -11,4 +10,360 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ── Domain models will be defined below ──────────────────────────────
+// ════════════════════════════════════════════════════════════════════
+//  Enums
+// ════════════════════════════════════════════════════════════════════
+
+enum ConfigurationCategory {
+  PROPERTY_TYPE
+  BUILDING_TYPE
+  UNIT_TYPE
+  OCCUPANCY_STATUS
+  PROPERTY_STATUS
+  LEASE_TYPE
+  LEASE_STATUS
+  PAYMENT_METHOD
+  PAYMENT_FREQUENCY
+}
+
+enum LateFeeType {
+  FIXED
+  PERCENTAGE
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+  PUSH
+  IN_APP
+}
+
+enum NotificationEvent {
+  RENT_DUE
+  PAYMENT_RECEIVED
+  LEASE_EXPIRY
+  WELCOME_TENANT
+}
+
+enum NumberedEntity {
+  PROPERTY
+  TENANT
+  LEASE
+  INVOICE
+  RECEIPT
+  PAYMENT
+  MAINTENANCE_TICKET
+  INSPECTION
+}
+
+enum SequenceResetPolicy {
+  NEVER
+  YEARLY
+  MONTHLY
+}
+
+enum FeatureKey {
+  MAINTENANCE
+  INSPECTION
+  AI
+  OWNER_PORTAL
+  TENANT_PORTAL
+  REPORTS
+  ACCOUNTING
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Tenant root
+// ════════════════════════════════════════════════════════════════════
+
+model Organization {
+  id       String  @id @default(cuid())
+  name     String
+  slug     String  @unique
+  isActive Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?
+  updatedBy String?
+  deletedAt DateTime?
+
+  // Configuration relations
+  organizationSettings OrganizationSettings?
+  leaseSettings        LeaseSettings?
+  paymentSettings      PaymentSettings?
+  notificationSettings NotificationSettings?
+  configurationOptions ConfigurationOption[]
+  lateFeeRules         LateFeeRule[]
+  notificationTemplates NotificationTemplate[]
+  numberingSequences   NumberingSequence[]
+  featureFlags         FeatureFlag[]
+  auditLogs            AuditLog[]
+
+  @@index([deletedAt])
+  @@map("organizations")
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  1. Organization Settings (singleton per org)
+// ════════════════════════════════════════════════════════════════════
+
+model OrganizationSettings {
+  id             String  @id @default(cuid())
+  organizationId String  @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  companyName        String?
+  logoUrl            String?
+  theme              String  @default("light")
+  currency           String  @default("USD")
+  timezone           String  @default("UTC")
+  language           String  @default("en")
+  dateFormat         String  @default("YYYY-MM-DD")
+  timeFormat         String  @default("HH:mm")
+  numberFormat       String  @default("1,234.56")
+  fiscalYearStartMonth Int   @default(1)
+  fiscalYearStartDay   Int   @default(1)
+  financialYearStart DateTime?
+  workingDays        Int[]   @default([1, 2, 3, 4, 5])
+  weekendDays        Int[]   @default([0, 6])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+  updatedBy String?
+
+  @@map("organization_settings")
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  2/3/4. Generic configurable options (property/lease/payment lists)
+// ════════════════════════════════════════════════════════════════════
+
+model ConfigurationOption {
+  id             String  @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  category    ConfigurationCategory
+  key         String
+  label       String
+  description String?
+  color       String?
+  icon        String?
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+  isSystem    Boolean @default(false)
+  metadata    Json?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?
+  updatedBy String?
+  deletedAt DateTime?
+
+  @@unique([organizationId, category, key])
+  @@index([organizationId, category])
+  @@index([deletedAt])
+  @@map("configuration_options")
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  3. Lease Settings (singleton) + Late Fee Rules
+// ════════════════════════════════════════════════════════════════════
+
+model LeaseSettings {
+  id             String  @id @default(cuid())
+  organizationId String  @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  renewalNoticePeriodDays Int     @default(30)
+  gracePeriodDays         Int     @default(0)
+  autoRenew               Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+  updatedBy String?
+
+  @@map("lease_settings")
+}
+
+model LateFeeRule {
+  id             String  @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name          String
+  feeType       LateFeeType
+  amount        Decimal  @db.Decimal(12, 2)
+  applyAfterDays Int     @default(0)
+  maxAmount     Decimal? @db.Decimal(12, 2)
+  sortOrder     Int      @default(0)
+  isActive      Boolean  @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?
+  updatedBy String?
+  deletedAt DateTime?
+
+  @@index([organizationId])
+  @@index([deletedAt])
+  @@map("late_fee_rules")
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  4. Payment Settings (singleton)
+// ════════════════════════════════════════════════════════════════════
+
+model PaymentSettings {
+  id             String  @id @default(cuid())
+  organizationId String  @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  invoicePrefix  String  @default("INV")
+  receiptPrefix  String  @default("RCP")
+  currencySymbol String  @default("$")
+  taxEnabled     Boolean @default(false)
+  taxRate        Decimal @default(0) @db.Decimal(5, 2)
+  vatEnabled     Boolean @default(false)
+  vatRate        Decimal @default(0) @db.Decimal(5, 2)
+  taxInclusive   Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+  updatedBy String?
+
+  @@map("payment_settings")
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  5. Notification Settings (singleton) + Templates
+// ════════════════════════════════════════════════════════════════════
+
+model NotificationSettings {
+  id             String  @id @default(cuid())
+  organizationId String  @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  emailEnabled    Boolean @default(true)
+  smsEnabled      Boolean @default(false)
+  whatsappEnabled Boolean @default(false)
+  pushEnabled     Boolean @default(false)
+  inAppEnabled    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+  updatedBy String?
+
+  @@map("notification_settings")
+}
+
+model NotificationTemplate {
+  id             String  @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  event   NotificationEvent
+  channel NotificationChannel
+  subject String?
+  body    String  @db.Text
+  isActive Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?
+  updatedBy String?
+  deletedAt DateTime?
+
+  @@unique([organizationId, event, channel])
+  @@index([organizationId])
+  @@map("notification_templates")
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  6. Numbering Engine
+// ════════════════════════════════════════════════════════════════════
+
+model NumberingSequence {
+  id             String  @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  entity          NumberedEntity
+  prefix          String              @default("")
+  suffix          String              @default("")
+  padding         Int                 @default(6)
+  separator       String              @default("-")
+  includeYear     Boolean             @default(false)
+  resetPolicy     SequenceResetPolicy @default(NEVER)
+  currentValue    Int                 @default(0)
+  lastResetPeriod String?
+  isActive        Boolean             @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+  updatedBy String?
+
+  @@unique([organizationId, entity])
+  @@index([organizationId])
+  @@map("numbering_sequences")
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  7. Feature Flags
+// ════════════════════════════════════════════════════════════════════
+
+model FeatureFlag {
+  id             String  @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  feature   FeatureKey
+  isEnabled Boolean    @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+  updatedBy String?
+
+  @@unique([organizationId, feature])
+  @@index([organizationId])
+  @@map("feature_flags")
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  8. Audit Log
+// ════════════════════════════════════════════════════════════════════
+
+model AuditLog {
+  id             String  @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  userId      String?
+  action      AuditAction
+  entityType  String
+  entityId    String?
+  description String?
+  changes     Json?
+  ipAddress   String?
+  userAgent   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, entityType])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
