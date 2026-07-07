@@ -5,6 +5,7 @@ import { PassportModule } from '@nestjs/passport';
 
 import { JwtStrategy } from '../../common/auth/jwt.strategy';
 import { OrganizationModule } from '../organization/organization.module';
+import { PropertyModule } from '../property/property.module';
 
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -17,6 +18,7 @@ import { TokenService } from './token.service';
   imports: [
     PassportModule,
     OrganizationModule,
+    PropertyModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

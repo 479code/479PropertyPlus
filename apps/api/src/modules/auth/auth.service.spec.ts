@@ -58,6 +58,9 @@ function build(): { service: AuthService; m: Mocks } {
     {} as MembershipRepository,
     m.rbac as unknown as RbacService,
     {} as OrganizationInviteService,
+    {
+      seedDefaults: jest.fn(),
+    } as unknown as import('../property/config/property-config.service').PropertyConfigService,
     m.passwords as unknown as PasswordService,
     m.tokens as unknown as TokenService,
     m.audit as unknown as AuditService,

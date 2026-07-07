@@ -52,6 +52,20 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
   p('property', 'restore', 'Restore archived properties'),
   p('property', 'export', 'Export property data'),
 
+  p('property_image', 'create', 'Add property images'),
+  p('property_image', 'update', 'Update property images'),
+  p('property_image', 'delete', 'Remove property images'),
+  p('property_document', 'create', 'Add property documents'),
+  p('property_document', 'update', 'Update property documents'),
+  p('property_document', 'delete', 'Remove property documents'),
+  p('property_type', 'manage', 'Manage property types'),
+  p('property_status', 'manage', 'Manage property statuses'),
+  p('property_feature', 'manage', 'Manage property features'),
+  p('property_tag', 'manage', 'Manage property tags'),
+
+  p('geography', 'read', 'View geographic reference data'),
+  p('geography', 'manage', 'Manage geographic reference data'),
+
   p('tenant', 'create', 'Create tenants'),
   p('tenant', 'read', 'View tenants'),
   p('tenant', 'update', 'Update tenants'),

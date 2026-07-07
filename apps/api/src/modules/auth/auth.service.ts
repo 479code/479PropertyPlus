@@ -12,6 +12,7 @@ import { OrganizationInviteService } from '../invites/organization-invite.servic
 import { MembershipRepository } from '../membership/membership.repository';
 import { MembershipService } from '../membership/membership.service';
 import { OrganizationRepository } from '../organization/organization.repository';
+import { PropertyConfigService } from '../property/config/property-config.service';
 import { RbacService } from '../rbac/rbac.service';
 import { UsersRepository } from '../users/users.repository';
 import { type PublicUser, toPublicUser, UsersService } from '../users/users.service';
@@ -54,6 +55,7 @@ export class AuthService {
     private readonly membershipRepository: MembershipRepository,
     private readonly rbac: RbacService,
     private readonly invites: OrganizationInviteService,
+    private readonly propertyConfig: PropertyConfigService,
     private readonly passwords: PasswordService,
     private readonly tokens: TokenService,
     private readonly audit: AuditService,
@@ -106,6 +108,7 @@ export class AuthService {
         createdBy: createdUser.id,
       });
       await this.rbac.assignRole(tx, createdMembership.id, ownerRole.id);
+      await this.propertyConfig.seedDefaults(tx, createdOrg.id, createdUser.id);
       return { user: createdUser, organization: createdOrg, membership: createdMembership };
     });
 

@@ -91,6 +91,8 @@ enum AuditAction {
   CREATE
   UPDATE
   DELETE
+  ARCHIVE
+  RESTORE
   LOGIN
   LOGOUT
 }
@@ -313,6 +315,13 @@ model Organization {
   numberingSequences   NumberingSequence[]
   featureFlags         FeatureFlag[]
   auditLogs            AuditLog[]
+
+  // Property foundation relations
+  propertyTypes    PropertyType[]
+  propertyStatuses PropertyStatus[]
+  propertyFeatures PropertyFeature[]
+  propertyTags     PropertyTag[]
+  properties       Property[]
 
   @@index([deletedAt])
   @@map("organizations")
@@ -575,4 +584,356 @@ model AuditLog {
   @@index([userId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Milestone 003 — Geographic hierarchy (GLOBAL, not org-scoped) +
+//  Property foundation (org-scoped).
+// ════════════════════════════════════════════════════════════════════
+
+enum DocumentType {
+  TITLE
+  SURVEY
+  CERTIFICATE
+  INSURANCE
+  BUILDING_PLAN
+  UTILITY
+  PURCHASE_AGREEMENT
+  LEASE
+  OTHER
+}
+
+enum PropertyOwnerType {
+  INDIVIDUAL
+  COMPANY
+  GOVERNMENT
+  TRUST
+  OTHER
+}
+
+// ── Geographic hierarchy (global reference data) ─────────────────────
+
+model Country {
+  id       String  @id @default(uuid()) @db.Uuid
+  name     String
+  isoCode  String  @unique
+  currency String?
+  timezone String?
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  states     State[]
+  properties Property[]
+
+  @@map("countries")
+}
+
+model State {
+  id        String  @id @default(uuid()) @db.Uuid
+  countryId String  @db.Uuid
+  country   Country @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  name      String
+  code      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cities     City[]
+  properties Property[]
+
+  @@unique([countryId, name])
+  @@index([countryId])
+  @@map("states")
+}
+
+model City {
+  id      String @id @default(uuid()) @db.Uuid
+  stateId String @db.Uuid
+  state   State  @relation(fields: [stateId], references: [id], onDelete: Cascade)
+  name    String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  districts  District[]
+  properties Property[]
+
+  @@unique([stateId, name])
+  @@index([stateId])
+  @@map("cities")
+}
+
+model District {
+  id     String @id @default(uuid()) @db.Uuid
+  cityId String @db.Uuid
+  city   City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  name   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  areas      Area[]
+  properties Property[]
+
+  @@unique([cityId, name])
+  @@index([cityId])
+  @@map("districts")
+}
+
+model Area {
+  id         String   @id @default(uuid()) @db.Uuid
+  districtId String   @db.Uuid
+  district   District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  name       String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  properties Property[]
+
+  @@unique([districtId, name])
+  @@index([districtId])
+  @@map("areas")
+}
+
+// ── Property configuration (org-scoped, seeded per organization) ─────
+
+model PropertyType {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name         String
+  description  String?
+  icon         String?
+  color        String?
+  displayOrder Int     @default(0)
+  isActive     Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
+  deletedAt DateTime?
+
+  properties Property[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("property_types")
+}
+
+model PropertyStatus {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name         String
+  color        String?
+  description  String?
+  displayOrder Int     @default(0)
+  isActive     Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
+  deletedAt DateTime?
+
+  properties Property[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("property_statuses")
+}
+
+model PropertyFeature {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name         String
+  icon         String?
+  displayOrder Int     @default(0)
+  isActive     Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
+  deletedAt DateTime?
+
+  assignments PropertyFeatureAssignment[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("property_features")
+}
+
+model PropertyTag {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name  String
+  color String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
+  deletedAt DateTime?
+
+  assignments PropertyTagAssignment[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("property_tags")
+}
+
+// ── Property entity ──────────────────────────────────────────────────
+
+model Property {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  propertyCode String
+  slug         String
+  name         String
+  description  String?
+
+  propertyTypeId String       @db.Uuid
+  propertyType   PropertyType @relation(fields: [propertyTypeId], references: [id])
+  statusId       String         @db.Uuid
+  status         PropertyStatus @relation(fields: [statusId], references: [id])
+
+  countryId  String?   @db.Uuid
+  country    Country?  @relation(fields: [countryId], references: [id])
+  stateId    String?   @db.Uuid
+  state      State?    @relation(fields: [stateId], references: [id])
+  cityId     String?   @db.Uuid
+  city       City?     @relation(fields: [cityId], references: [id])
+  districtId String?   @db.Uuid
+  district   District? @relation(fields: [districtId], references: [id])
+  areaId     String?   @db.Uuid
+  area       Area?     @relation(fields: [areaId], references: [id])
+
+  streetAddress String?
+  postalCode    String?
+
+  latitude    Decimal? @db.Decimal(10, 7)
+  longitude   Decimal? @db.Decimal(10, 7)
+  polygon     Json?
+  geoJson     Json?
+  googlePlaceId String?
+
+  yearBuilt             Int?
+  purchaseDate          DateTime?
+  purchasePrice         Decimal?  @db.Decimal(18, 2)
+  marketValue           Decimal?  @db.Decimal(18, 2)
+  expectedAnnualRevenue Decimal?  @db.Decimal(18, 2)
+
+  ownerType         PropertyOwnerType?
+  ownerReferenceId  String?            @db.Uuid
+
+  totalBuildings Int @default(0)
+  totalUnits     Int @default(0)
+  occupiedUnits  Int @default(0)
+  vacantUnits    Int @default(0)
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
+  deletedAt DateTime?
+
+  images    PropertyImage[]
+  documents PropertyDocument[]
+  features  PropertyFeatureAssignment[]
+  tags      PropertyTagAssignment[]
+
+  @@unique([organizationId, propertyCode])
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+  @@index([propertyCode])
+  @@index([slug])
+  @@index([propertyTypeId])
+  @@index([statusId])
+  @@index([countryId])
+  @@index([stateId])
+  @@index([cityId])
+  @@index([districtId])
+  @@index([areaId])
+  @@index([googlePlaceId])
+  @@index([deletedAt])
+  @@map("properties")
+}
+
+model PropertyImage {
+  id         String   @id @default(uuid()) @db.Uuid
+  propertyId String   @db.Uuid
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  url       String
+  caption   String?
+  sortOrder Int     @default(0)
+  isPrimary Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([propertyId])
+  @@map("property_images")
+}
+
+model PropertyDocument {
+  id         String   @id @default(uuid()) @db.Uuid
+  propertyId String   @db.Uuid
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  documentType DocumentType
+  name         String
+  url          String
+  description  String?
+  uploadedBy   String?      @db.Uuid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([propertyId])
+  @@index([documentType])
+  @@map("property_documents")
+}
+
+model PropertyFeatureAssignment {
+  id         String          @id @default(uuid()) @db.Uuid
+  propertyId String          @db.Uuid
+  featureId  String          @db.Uuid
+  property   Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  feature    PropertyFeature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([propertyId, featureId])
+  @@index([featureId])
+  @@map("property_feature_assignments")
+}
+
+model PropertyTagAssignment {
+  id         String      @id @default(uuid()) @db.Uuid
+  propertyId String      @db.Uuid
+  tagId      String      @db.Uuid
+  property   Property    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  tag        PropertyTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([propertyId, tagId])
+  @@index([tagId])
+  @@map("property_tag_assignments")
 }

@@ -10,9 +10,11 @@ import { PermissionsGuard } from './common/auth/permissions.guard';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ConfigurationModule } from './modules/config/configuration.module';
+import { GeoModule } from './modules/geo/geo.module';
 import { InvitesModule } from './modules/invites/invites.module';
 import { MembershipModule } from './modules/membership/membership.module';
 import { OrganizationModule } from './modules/organization/organization.module';
+import { PropertyModule } from './modules/property/property.module';
 import { RbacModule } from './modules/rbac/rbac.module';
 import { UsersModule } from './modules/users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -43,6 +45,8 @@ import { PrismaModule } from './prisma/prisma.module';
     AuthModule,
     OrganizationModule,
     ConfigurationModule,
+    GeoModule,
+    PropertyModule,
   ],
   controllers: [AppController],
   providers: [
