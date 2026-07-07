@@ -33,7 +33,17 @@ export class PropertyConfigRepository {
     db: PrismaDb = this.prisma,
   ): Promise<PropertyType> {
     return db.propertyType.create({
-      data: { organizationId, ...data, createdBy: actorId, updatedBy: actorId },
+      data: {
+        organizationId,
+        name: (data as any).name,
+        description: (data as any).description,
+        icon: (data as any).icon,
+        color: (data as any).color,
+        displayOrder: (data as any).displayOrder,
+        isActive: (data as any).isActive,
+        createdBy: actorId,
+        updatedBy: actorId,
+      },
     });
   }
   updateType(id: string, data: Record<string, unknown>, actorId?: string): Promise<PropertyType> {
@@ -71,7 +81,16 @@ export class PropertyConfigRepository {
     db: PrismaDb = this.prisma,
   ): Promise<PropertyStatus> {
     return db.propertyStatus.create({
-      data: { organizationId, ...data, createdBy: actorId, updatedBy: actorId },
+      data: {
+        organizationId,
+        name: (data as any).name,
+        color: (data as any).color,
+        description: (data as any).description,
+        displayOrder: (data as any).displayOrder,
+        isActive: (data as any).isActive,
+        createdBy: actorId,
+        updatedBy: actorId,
+      },
     });
   }
   updateStatus(
@@ -115,7 +134,15 @@ export class PropertyConfigRepository {
     db: PrismaDb = this.prisma,
   ): Promise<PropertyFeature> {
     return db.propertyFeature.create({
-      data: { organizationId, ...data, createdBy: actorId, updatedBy: actorId },
+      data: {
+        organizationId,
+        name: (data as any).name,
+        icon: (data as any).icon,
+        displayOrder: (data as any).displayOrder,
+        isActive: (data as any).isActive,
+        createdBy: actorId,
+        updatedBy: actorId,
+      },
     });
   }
   updateFeature(
@@ -155,7 +182,13 @@ export class PropertyConfigRepository {
     db: PrismaDb = this.prisma,
   ): Promise<PropertyTag> {
     return db.propertyTag.create({
-      data: { organizationId, ...data, createdBy: actorId, updatedBy: actorId },
+      data: {
+        organizationId,
+        name: (data as any).name,
+        color: (data as any).color,
+        createdBy: actorId,
+        updatedBy: actorId,
+      },
     });
   }
   updateTag(id: string, data: Record<string, unknown>, actorId?: string): Promise<PropertyTag> {
