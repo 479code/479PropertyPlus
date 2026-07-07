@@ -24,6 +24,7 @@ async function bootstrap(): Promise<void> {
     .setDescription('Enterprise property management platform API')
     .setVersion('0.1.0')
     .addServer(`/${globalPrefix}`)
+    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup(`${globalPrefix}/docs`, app, document);

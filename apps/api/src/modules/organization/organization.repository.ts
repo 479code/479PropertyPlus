@@ -2,13 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { type Organization } from '@prisma/client';
 
 import { PrismaService } from '../../prisma/prisma.service';
+import { type PrismaDb } from '../rbac/rbac.repository';
 
 @Injectable()
 export class OrganizationRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(data: { name: string; slug: string; createdBy?: string }): Promise<Organization> {
-    return this.prisma.organization.create({ data });
+  /** Accepts an optional transaction client so signup can create the org atomically. */
+  create(
+    data: { name: string; slug: string; createdBy?: string },
+    db: PrismaDb = this.prisma,
+  ): Promise<Organization> {
+    return db.organization.create({ data });
   }
 
   findById(id: string): Promise<Organization | null> {

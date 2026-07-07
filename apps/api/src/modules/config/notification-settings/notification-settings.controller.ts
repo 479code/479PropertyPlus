@@ -1,7 +1,8 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Put } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { type NotificationSettings, type NotificationTemplate } from '@prisma/client';
 
+import { RequirePermissions } from '../../../common/auth/require-permissions.decorator';
 import { ActorId, OrgId } from '../../../common/tenant/tenant.decorators';
 
 import { CreateNotificationTemplateDto } from './dto/create-notification-template.dto';
@@ -11,6 +12,8 @@ import { NotificationSettingsService } from './notification-settings.service';
 
 @ApiTags('Notification Settings')
 @Controller('config/notification-settings')
+@ApiBearerAuth()
+@RequirePermissions('configuration:read')
 export class NotificationSettingsController {
   constructor(private readonly service: NotificationSettingsService) {}
 
@@ -20,6 +23,7 @@ export class NotificationSettingsController {
     return this.service.getSettings(organizationId, actorId);
   }
 
+  @RequirePermissions('configuration:update')
   @Put()
   @ApiOperation({ summary: 'Update notification channel settings' })
   update(
@@ -36,6 +40,7 @@ export class NotificationSettingsController {
     return this.service.listTemplates(organizationId);
   }
 
+  @RequirePermissions('configuration:create')
   @Post('templates')
   @ApiOperation({ summary: 'Create a notification template' })
   createTemplate(
@@ -46,6 +51,7 @@ export class NotificationSettingsController {
     return this.service.createTemplate(organizationId, dto, actorId);
   }
 
+  @RequirePermissions('configuration:update')
   @Patch('templates/:id')
   @ApiOperation({ summary: 'Update a notification template' })
   updateTemplate(
@@ -57,6 +63,7 @@ export class NotificationSettingsController {
     return this.service.updateTemplate(organizationId, id, dto, actorId);
   }
 
+  @RequirePermissions('configuration:delete')
   @Delete('templates/:id')
   @HttpCode(204)
   @ApiOperation({ summary: 'Delete a notification template' })

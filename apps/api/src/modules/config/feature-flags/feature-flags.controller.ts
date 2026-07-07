@@ -1,7 +1,8 @@
 import { Body, Controller, Get, Param, ParseEnumPipe, Put } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { type FeatureFlag, FeatureKey } from '@prisma/client';
 
+import { RequirePermissions } from '../../../common/auth/require-permissions.decorator';
 import { ActorId, OrgId } from '../../../common/tenant/tenant.decorators';
 
 import { UpsertFeatureFlagDto } from './dto/upsert-feature-flag.dto';
@@ -9,6 +10,8 @@ import { type FeatureState, FeatureFlagsService } from './feature-flags.service'
 
 @ApiTags('Feature Flags')
 @Controller('config/feature-flags')
+@ApiBearerAuth()
+@RequirePermissions('configuration:read')
 export class FeatureFlagsController {
   constructor(private readonly service: FeatureFlagsService) {}
 
@@ -18,6 +21,7 @@ export class FeatureFlagsController {
     return this.service.list(organizationId);
   }
 
+  @RequirePermissions('configuration:update')
   @Put(':feature')
   @ApiOperation({ summary: 'Enable or disable a feature for the organization' })
   set(

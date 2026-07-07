@@ -1,7 +1,8 @@
 import { Body, Controller, Get, Param, ParseEnumPipe, Patch, Post } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { NumberedEntity, type NumberingSequence } from '@prisma/client';
 
+import { RequirePermissions } from '../../../common/auth/require-permissions.decorator';
 import { ActorId, OrgId } from '../../../common/tenant/tenant.decorators';
 
 import { CreateNumberingSequenceDto } from './dto/create-numbering-sequence.dto';
@@ -11,6 +12,8 @@ import { NumberingService } from './numbering.service';
 
 @ApiTags('Numbering')
 @Controller('config/numbering')
+@ApiBearerAuth()
+@RequirePermissions('configuration:read')
 export class NumberingController {
   constructor(
     private readonly service: NumberingService,
@@ -23,6 +26,7 @@ export class NumberingController {
     return this.service.list(organizationId);
   }
 
+  @RequirePermissions('configuration:create')
   @Post()
   @ApiOperation({ summary: 'Create a numbering sequence' })
   create(
@@ -33,6 +37,7 @@ export class NumberingController {
     return this.service.create(organizationId, dto, actorId);
   }
 
+  @RequirePermissions('configuration:update')
   @Patch(':entity')
   @ApiOperation({ summary: 'Update a numbering sequence' })
   update(
@@ -44,6 +49,7 @@ export class NumberingController {
     return this.service.update(organizationId, entity, dto, actorId);
   }
 
+  @RequirePermissions('configuration:create')
   @Post(':entity/next')
   @ApiOperation({ summary: 'Reserve and return the next number for an entity' })
   next(

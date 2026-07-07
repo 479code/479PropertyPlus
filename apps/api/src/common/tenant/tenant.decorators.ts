@@ -1,29 +1,26 @@
-import { BadRequestException, createParamDecorator, type ExecutionContext } from '@nestjs/common';
+import { createParamDecorator, type ExecutionContext, UnauthorizedException } from '@nestjs/common';
+
+import { type AuthenticatedUser } from '../../modules/auth/auth.types';
 
 /**
- * INTERIM tenant resolution until the auth/JWT module lands.
- * Resolves the active organization from the `x-organization-id` header.
- * TODO(auth): replace with organizationId derived from the authenticated JWT.
+ * Resolves the active organization from the authenticated JWT principal
+ * (populated by JwtStrategy). Replaces the earlier `x-organization-id` header
+ * shim — organization context is now bound to the access token and switched via
+ * POST /organizations/switch.
  */
 export const OrgId = createParamDecorator((_data: unknown, ctx: ExecutionContext): string => {
-  const request = ctx.switchToHttp().getRequest<{ headers: Record<string, string | undefined> }>();
-  const orgId = request.headers['x-organization-id'];
-  if (!orgId || typeof orgId !== 'string') {
-    throw new BadRequestException('Missing required header: x-organization-id');
+  const request = ctx.switchToHttp().getRequest<{ user?: AuthenticatedUser }>();
+  const orgId = request.user?.organizationId;
+  if (!orgId) {
+    throw new UnauthorizedException('No active organization on the authenticated session');
   }
   return orgId;
 });
 
-/**
- * INTERIM actor resolution. Resolves the acting user from `x-user-id` (optional).
- * TODO(auth): replace with userId derived from the authenticated JWT.
- */
+/** Resolves the acting user id from the authenticated JWT principal. */
 export const ActorId = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): string | undefined => {
-    const request = ctx
-      .switchToHttp()
-      .getRequest<{ headers: Record<string, string | undefined> }>();
-    const userId = request.headers['x-user-id'];
-    return typeof userId === 'string' ? userId : undefined;
+    const request = ctx.switchToHttp().getRequest<{ user?: AuthenticatedUser }>();
+    return request.user?.userId;
   },
 );

@@ -1,5 +1,6 @@
 // 479Property+ — Prisma schema
-// Milestone 002.5: System Configuration Engine (+ tenant-root models it depends on).
+// Foundation: multi-organization authentication + System Configuration Engine.
+// Primary keys: UUID (@db.Uuid) across every table. Soft deletes + audit fields.
 
 generator client {
   provider = "prisma-client-js"
@@ -13,6 +14,19 @@ datasource db {
 // ════════════════════════════════════════════════════════════════════
 //  Enums
 // ════════════════════════════════════════════════════════════════════
+
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  CANCELLED
+  EXPIRED
+}
 
 enum ConfigurationCategory {
   PROPERTY_TYPE
@@ -77,6 +91,193 @@ enum AuditAction {
   CREATE
   UPDATE
   DELETE
+  LOGIN
+  LOGOUT
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Identity — User is GLOBAL (no organizationId). Org membership is a join.
+// ════════════════════════════════════════════════════════════════════
+
+model User {
+  id           String  @id @default(uuid()) @db.Uuid
+  email        String  @unique
+  passwordHash String
+  firstName    String?
+  lastName     String?
+  isActive     Boolean @default(true)
+  lastLoginAt  DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
+  deletedAt DateTime?
+
+  memberships   Membership[]
+  refreshTokens RefreshToken[]
+  preference    UserPreference?
+  auditLogs     AuditLog[]
+
+  @@index([deletedAt])
+  @@map("users")
+}
+
+model UserPreference {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @unique @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  theme                   String  @default("system")
+  language                String  @default("en")
+  timezone                String  @default("UTC")
+  dateFormat              String  @default("YYYY-MM-DD")
+  timeFormat              String  @default("HH:mm")
+  landingPage             String  @default("/dashboard")
+  notificationPreferences Json?
+  sidebarCollapsed        Boolean @default(false)
+  density                 String  @default("comfortable")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_preferences")
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Multi-org: Membership links a User to an Organization; roles hang off it.
+// ════════════════════════════════════════════════════════════════════
+
+model Membership {
+  id             String @id @default(uuid()) @db.Uuid
+  userId         String @db.Uuid
+  organizationId String @db.Uuid
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  status MembershipStatus @default(ACTIVE)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
+  deletedAt DateTime?
+
+  roles MembershipRole[]
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("memberships")
+}
+
+model Role {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  key         String
+  name        String
+  description String?
+  isSystem    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?  @db.Uuid
+  updatedBy String?  @db.Uuid
+
+  permissions RolePermission[]
+  members     MembershipRole[]
+  invites     OrganizationInvite[]
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
+  @@map("roles")
+}
+
+model Permission {
+  id          String  @id @default(uuid()) @db.Uuid
+  key         String  @unique
+  resource    String
+  action      String
+  description String?
+
+  createdAt DateTime @default(now())
+
+  roles RolePermission[]
+
+  @@unique([resource, action])
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String @id @default(uuid()) @db.Uuid
+  roleId       String @db.Uuid
+  permissionId String @db.Uuid
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model MembershipRole {
+  id           String @id @default(uuid()) @db.Uuid
+  membershipId String @db.Uuid
+  roleId       String @db.Uuid
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([membershipId, roleId])
+  @@index([roleId])
+  @@map("membership_roles")
+}
+
+model RefreshToken {
+  id             String @id @default(uuid()) @db.Uuid
+  userId         String @db.Uuid
+  organizationId String @db.Uuid
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  tokenHash    String    @unique
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  replacedById String?   @db.Uuid
+  userAgent    String?
+  ipAddress    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model OrganizationInvite {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  email     String
+  roleId    String       @db.Uuid
+  role      Role         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  tokenHash String       @unique
+  status    InviteStatus @default(PENDING)
+  expiresAt DateTime
+  acceptedAt DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+
+  @@index([organizationId])
+  @@index([email])
+  @@map("organization_invites")
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -84,16 +285,22 @@ enum AuditAction {
 // ════════════════════════════════════════════════════════════════════
 
 model Organization {
-  id       String  @id @default(cuid())
+  id       String  @id @default(uuid()) @db.Uuid
   name     String
   slug     String  @unique
   isActive Boolean @default(true)
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  createdBy String?
-  updatedBy String?
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
   deletedAt DateTime?
+
+  // Auth relations
+  memberships Membership[]
+  roles       Role[]
+  invites     OrganizationInvite[]
+  refreshTokens RefreshToken[]
 
   // Configuration relations
   organizationSettings OrganizationSettings?
@@ -116,8 +323,8 @@ model Organization {
 // ════════════════════════════════════════════════════════════════════
 
 model OrganizationSettings {
-  id             String  @id @default(cuid())
-  organizationId String  @unique
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @unique @db.Uuid
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   companyName        String?
@@ -137,8 +344,8 @@ model OrganizationSettings {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  createdBy String?
-  updatedBy String?
+  createdBy String?  @db.Uuid
+  updatedBy String?  @db.Uuid
 
   @@map("organization_settings")
 }
@@ -148,8 +355,8 @@ model OrganizationSettings {
 // ════════════════════════════════════════════════════════════════════
 
 model ConfigurationOption {
-  id             String  @id @default(cuid())
-  organizationId String
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   category    ConfigurationCategory
@@ -165,8 +372,8 @@ model ConfigurationOption {
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  createdBy String?
-  updatedBy String?
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
   deletedAt DateTime?
 
   @@unique([organizationId, category, key])
@@ -180,8 +387,8 @@ model ConfigurationOption {
 // ════════════════════════════════════════════════════════════════════
 
 model LeaseSettings {
-  id             String  @id @default(cuid())
-  organizationId String  @unique
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @unique @db.Uuid
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   renewalNoticePeriodDays Int     @default(30)
@@ -190,15 +397,15 @@ model LeaseSettings {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  createdBy String?
-  updatedBy String?
+  createdBy String?  @db.Uuid
+  updatedBy String?  @db.Uuid
 
   @@map("lease_settings")
 }
 
 model LateFeeRule {
-  id             String  @id @default(cuid())
-  organizationId String
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   name          String
@@ -211,8 +418,8 @@ model LateFeeRule {
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  createdBy String?
-  updatedBy String?
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
   deletedAt DateTime?
 
   @@index([organizationId])
@@ -225,8 +432,8 @@ model LateFeeRule {
 // ════════════════════════════════════════════════════════════════════
 
 model PaymentSettings {
-  id             String  @id @default(cuid())
-  organizationId String  @unique
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @unique @db.Uuid
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   invoicePrefix  String  @default("INV")
@@ -240,8 +447,8 @@ model PaymentSettings {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  createdBy String?
-  updatedBy String?
+  createdBy String?  @db.Uuid
+  updatedBy String?  @db.Uuid
 
   @@map("payment_settings")
 }
@@ -251,8 +458,8 @@ model PaymentSettings {
 // ════════════════════════════════════════════════════════════════════
 
 model NotificationSettings {
-  id             String  @id @default(cuid())
-  organizationId String  @unique
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @unique @db.Uuid
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   emailEnabled    Boolean @default(true)
@@ -263,15 +470,15 @@ model NotificationSettings {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  createdBy String?
-  updatedBy String?
+  createdBy String?  @db.Uuid
+  updatedBy String?  @db.Uuid
 
   @@map("notification_settings")
 }
 
 model NotificationTemplate {
-  id             String  @id @default(cuid())
-  organizationId String
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   event   NotificationEvent
@@ -282,8 +489,8 @@ model NotificationTemplate {
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  createdBy String?
-  updatedBy String?
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
   deletedAt DateTime?
 
   @@unique([organizationId, event, channel])
@@ -296,8 +503,8 @@ model NotificationTemplate {
 // ════════════════════════════════════════════════════════════════════
 
 model NumberingSequence {
-  id             String  @id @default(cuid())
-  organizationId String
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   entity          NumberedEntity
@@ -313,8 +520,8 @@ model NumberingSequence {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  createdBy String?
-  updatedBy String?
+  createdBy String?  @db.Uuid
+  updatedBy String?  @db.Uuid
 
   @@unique([organizationId, entity])
   @@index([organizationId])
@@ -326,8 +533,8 @@ model NumberingSequence {
 // ════════════════════════════════════════════════════════════════════
 
 model FeatureFlag {
-  id             String  @id @default(cuid())
-  organizationId String
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   feature   FeatureKey
@@ -335,8 +542,8 @@ model FeatureFlag {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  createdBy String?
-  updatedBy String?
+  createdBy String?  @db.Uuid
+  updatedBy String?  @db.Uuid
 
   @@unique([organizationId, feature])
   @@index([organizationId])
@@ -348,11 +555,12 @@ model FeatureFlag {
 // ════════════════════════════════════════════════════════════════════
 
 model AuditLog {
-  id             String  @id @default(cuid())
-  organizationId String?
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String? @db.Uuid
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
-  userId      String?
+  userId      String? @db.Uuid
+  user        User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
   action      AuditAction
   entityType  String
   entityId    String?
@@ -364,6 +572,7 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   @@index([organizationId, entityType])
+  @@index([userId])
   @@index([createdAt])
   @@map("audit_logs")
 }

@@ -1,0 +1,79 @@
+export interface PermissionDef {
+  key: string;
+  resource: string;
+  action: string;
+  description: string;
+}
+
+const p = (resource: string, action: string, description: string): PermissionDef => ({
+  key: `${resource}:${action}`,
+  resource,
+  action,
+  description,
+});
+
+/**
+ * The complete, fine-grained (resource:action) permission catalog for the
+ * platform. Permissions are global, app-defined constants; organizations grant
+ * them to roles. New modules extend this list — never coarsen it.
+ */
+export const PERMISSION_CATALOG: PermissionDef[] = [
+  p('organization', 'create', 'Create organizations'),
+  p('organization', 'read', 'View organization details'),
+  p('organization', 'update', 'Update organization details'),
+  p('organization', 'delete', 'Delete an organization'),
+
+  p('membership', 'read', 'View organization members'),
+  p('membership', 'update', 'Update member status and roles'),
+  p('membership', 'remove', 'Remove a member from the organization'),
+
+  p('role', 'create', 'Create roles'),
+  p('role', 'read', 'View roles'),
+  p('role', 'update', 'Update roles'),
+  p('role', 'delete', 'Delete roles'),
+
+  p('permission', 'read', 'View the permission catalog'),
+
+  p('invitation', 'create', 'Invite users to the organization'),
+  p('invitation', 'read', 'View pending invitations'),
+  p('invitation', 'resend', 'Resend an invitation'),
+  p('invitation', 'cancel', 'Cancel an invitation'),
+
+  p('configuration', 'read', 'View organization configuration'),
+  p('configuration', 'create', 'Create configuration entries'),
+  p('configuration', 'update', 'Update organization configuration'),
+  p('configuration', 'delete', 'Delete configuration entries'),
+
+  p('property', 'create', 'Create properties'),
+  p('property', 'read', 'View properties'),
+  p('property', 'update', 'Update properties'),
+  p('property', 'delete', 'Delete properties'),
+  p('property', 'archive', 'Archive properties'),
+  p('property', 'restore', 'Restore archived properties'),
+  p('property', 'export', 'Export property data'),
+
+  p('tenant', 'create', 'Create tenants'),
+  p('tenant', 'read', 'View tenants'),
+  p('tenant', 'update', 'Update tenants'),
+  p('tenant', 'delete', 'Delete tenants'),
+
+  p('lease', 'create', 'Create leases'),
+  p('lease', 'read', 'View leases'),
+  p('lease', 'update', 'Update leases'),
+  p('lease', 'renew', 'Renew leases'),
+  p('lease', 'terminate', 'Terminate leases'),
+
+  p('payment', 'create', 'Record payments'),
+  p('payment', 'read', 'View payments'),
+  p('payment', 'update', 'Update payments'),
+  p('payment', 'approve', 'Approve payments'),
+
+  p('report', 'read', 'View reports'),
+  p('report', 'export', 'Export reports'),
+
+  p('notification', 'send', 'Send notifications'),
+
+  p('audit', 'read', 'View the audit log'),
+];
+
+export const PERMISSION_KEYS: string[] = PERMISSION_CATALOG.map((entry) => entry.key);

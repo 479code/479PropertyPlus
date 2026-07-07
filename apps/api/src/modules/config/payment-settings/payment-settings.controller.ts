@@ -1,7 +1,8 @@
 import { Body, Controller, Get, Put } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { type PaymentSettings } from '@prisma/client';
 
+import { RequirePermissions } from '../../../common/auth/require-permissions.decorator';
 import { ActorId, OrgId } from '../../../common/tenant/tenant.decorators';
 
 import { UpdatePaymentSettingsDto } from './dto/update-payment-settings.dto';
@@ -9,6 +10,8 @@ import { PaymentSettingsService } from './payment-settings.service';
 
 @ApiTags('Payment Settings')
 @Controller('config/payment-settings')
+@ApiBearerAuth()
+@RequirePermissions('configuration:read')
 export class PaymentSettingsController {
   constructor(private readonly service: PaymentSettingsService) {}
 
@@ -18,6 +21,7 @@ export class PaymentSettingsController {
     return this.service.get(organizationId, actorId);
   }
 
+  @RequirePermissions('configuration:update')
   @Put()
   @ApiOperation({ summary: 'Update payment settings' })
   update(

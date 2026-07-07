@@ -1,7 +1,8 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Put } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { type LateFeeRule, type LeaseSettings } from '@prisma/client';
 
+import { RequirePermissions } from '../../../common/auth/require-permissions.decorator';
 import { ActorId, OrgId } from '../../../common/tenant/tenant.decorators';
 
 import { CreateLateFeeRuleDto } from './dto/create-late-fee-rule.dto';
@@ -11,6 +12,8 @@ import { LeaseSettingsService } from './lease-settings.service';
 
 @ApiTags('Lease Settings')
 @Controller('config/lease-settings')
+@ApiBearerAuth()
+@RequirePermissions('configuration:read')
 export class LeaseSettingsController {
   constructor(private readonly service: LeaseSettingsService) {}
 
@@ -20,6 +23,7 @@ export class LeaseSettingsController {
     return this.service.get(organizationId, actorId);
   }
 
+  @RequirePermissions('configuration:update')
   @Put()
   @ApiOperation({ summary: 'Update lease settings' })
   update(
@@ -36,6 +40,7 @@ export class LeaseSettingsController {
     return this.service.listLateFeeRules(organizationId);
   }
 
+  @RequirePermissions('configuration:create')
   @Post('late-fee-rules')
   @ApiOperation({ summary: 'Create a late fee rule' })
   createRule(
@@ -46,6 +51,7 @@ export class LeaseSettingsController {
     return this.service.createLateFeeRule(organizationId, dto, actorId);
   }
 
+  @RequirePermissions('configuration:update')
   @Patch('late-fee-rules/:id')
   @ApiOperation({ summary: 'Update a late fee rule' })
   updateRule(
@@ -57,6 +63,7 @@ export class LeaseSettingsController {
     return this.service.updateLateFeeRule(organizationId, id, dto, actorId);
   }
 
+  @RequirePermissions('configuration:delete')
   @Delete('late-fee-rules/:id')
   @HttpCode(204)
   @ApiOperation({ summary: 'Delete a late fee rule' })

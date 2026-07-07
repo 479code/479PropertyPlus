@@ -4,7 +4,7 @@ module.exports = {
   rootDir: 'src',
   testRegex: '.*\\.spec\\.ts$',
   transform: {
-    '^.+\\.ts$': ['ts-jest', { isolatedModules: true }],
+    '^.+\\.ts$': 'ts-jest',
   },
   // Resolve workspace packages from their TypeScript source so ts-jest compiles
   // them to CommonJS. Their published build is ESM ("type": "module"), which the
