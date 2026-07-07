@@ -15,6 +15,23 @@ export interface TokenContext {
   email: string;
 }
 
+function toInt(value: unknown, fallback: number): number {
+  const n = parseInt(String(value ?? '').trim(), 10);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+/** Accepts seconds ("900") or a jsonwebtoken timespan ("15m", "7d", "30s", "2h"); returns seconds. */
+function parseTtlSeconds(value: unknown, fallback: number): number {
+  const raw = String(value ?? '').trim();
+  if (/^\d+$/.test(raw)) return Number(raw);
+  const m = raw.match(/^(\d+)\s*([smhd])$/i);
+  if (m) {
+    const mult: Record<string, number> = { s: 1, m: 60, h: 3600, d: 86400 };
+    return Number(m[1]) * (mult[m[2].toLowerCase()] ?? 1);
+  }
+  return fallback;
+}
+
 @Injectable()
 export class TokenService {
   private readonly accessTtl: number;
@@ -25,8 +42,8 @@ export class TokenService {
     private readonly config: ConfigService,
     private readonly refreshTokens: RefreshTokenRepository,
   ) {
-    this.accessTtl = Number(this.config.get('JWT_ACCESS_TTL', 900)); // seconds (15m)
-    const refreshDays = Number(this.config.get('JWT_REFRESH_TTL_DAYS', 7));
+    this.accessTtl = parseTtlSeconds(this.config.get('JWT_ACCESS_TTL'), 900); // seconds (default 15m)
+    const refreshDays = toInt(this.config.get('JWT_REFRESH_TTL_DAYS'), 7);
     this.refreshTtlMs = refreshDays * 24 * 60 * 60 * 1000;
   }
 

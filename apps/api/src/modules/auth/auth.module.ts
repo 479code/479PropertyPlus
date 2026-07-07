@@ -22,7 +22,7 @@ import { TokenService } from './token.service';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: Number(config.get('JWT_ACCESS_TTL', 900)) },
+        signOptions: {},
       }),
     }),
   ],
