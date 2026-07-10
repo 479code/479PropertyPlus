@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { type UnitAvailability } from '@prisma/client';
+import { UnitAvailability } from '@prisma/client';
 
 import { PrismaService } from '../../../prisma/prisma.service';
 
@@ -46,19 +46,30 @@ export interface PropertyInventorySummary {
 export class InventorySummaryService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Counts units per availability value. Deliberately uses one count() call per
+   * status rather than groupBy(): Prisma's groupBy() generics require the `by`
+   * array to be inferred as a literal tuple, which is brittle across TS/Prisma
+   * versions and fails to typecheck against the real generated client in ways
+   * that don't reproduce in isolated type tests. count() has a stable, simple
+   * signature and this runs as one parallel Promise.all, so there's no
+   * meaningful performance cost for the ~7 known availability values.
+   */
   private async availabilityCounts(where: {
     organizationId: string;
     propertyId?: string;
     buildingId?: string;
   }): Promise<Record<string, number>> {
-    const rows: Array<{ availability: UnitAvailability; _count: number }> =
-      await this.prisma.unit.groupBy({
-        by: ['availability'],
-        where: { ...where, deletedAt: null },
-        _count: true,
-      });
+    const values = Object.values(UnitAvailability);
+    const counts = await Promise.all(
+      values.map((availability) =>
+        this.prisma.unit.count({ where: { ...where, deletedAt: null, availability } }),
+      ),
+    );
     const out: Record<string, number> = {};
-    for (const r of rows) out[r.availability] = r._count;
+    values.forEach((availability, i) => {
+      out[availability] = counts[i];
+    });
     return out;
   }
 
