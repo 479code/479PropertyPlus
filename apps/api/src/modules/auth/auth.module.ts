@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 
 import { JwtStrategy } from '../../common/auth/jwt.strategy';
+import { InventoryModule } from '../inventory/inventory.module';
 import { OrganizationModule } from '../organization/organization.module';
 import { PropertyModule } from '../property/property.module';
 
@@ -19,6 +20,7 @@ import { TokenService } from './token.service';
     PassportModule,
     OrganizationModule,
     PropertyModule,
+    InventoryModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

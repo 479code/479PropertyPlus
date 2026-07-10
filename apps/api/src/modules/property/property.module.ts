@@ -39,6 +39,6 @@ import { PropertyService } from './property.service';
     PropertyMediaService,
     PropertyMediaRepository,
   ],
-  exports: [PropertyConfigService],
+  exports: [PropertyConfigService, PropertyRepository],
 })
 export class PropertyModule {}

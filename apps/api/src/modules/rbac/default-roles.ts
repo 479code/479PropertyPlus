@@ -16,6 +16,8 @@ const managerPermissions = PERMISSION_KEYS.filter((k) => {
   const [resource, action] = k.split(':');
   if (['property', 'tenant', 'lease'].includes(resource)) return true;
   if (resource.startsWith('property_')) return true;
+  if (['building', 'floor', 'unit'].includes(resource)) return true;
+  if (resource.startsWith('building_') || resource.startsWith('unit_')) return true;
   if (resource === 'geography') return action === 'read';
   if (resource === 'payment') return ['create', 'read', 'update'].includes(action);
   if (resource === 'report') return true;

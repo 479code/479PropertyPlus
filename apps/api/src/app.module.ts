@@ -11,6 +11,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ConfigurationModule } from './modules/config/configuration.module';
 import { GeoModule } from './modules/geo/geo.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
 import { InvitesModule } from './modules/invites/invites.module';
 import { MembershipModule } from './modules/membership/membership.module';
 import { OrganizationModule } from './modules/organization/organization.module';
@@ -47,6 +48,7 @@ import { PrismaModule } from './prisma/prisma.module';
     ConfigurationModule,
     GeoModule,
     PropertyModule,
+    InventoryModule,
   ],
   controllers: [AppController],
   providers: [

@@ -8,6 +8,9 @@ import { formatSequenceNumber, resolvePeriod } from './number-format.util';
 /** Sensible default prefixes used when a sequence is auto-provisioned on first use. */
 const DEFAULT_PREFIX: Record<NumberedEntity, string> = {
   PROPERTY: 'PROP',
+  BUILDING: 'BLD',
+  FLOOR: 'FLR',
+  UNIT: 'UNIT',
   TENANT: 'TEN',
   LEASE: 'LSE',
   INVOICE: 'INV',

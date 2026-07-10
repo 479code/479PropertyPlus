@@ -61,6 +61,9 @@ function build(): { service: AuthService; m: Mocks } {
     {
       seedDefaults: jest.fn(),
     } as unknown as import('../property/config/property-config.service').PropertyConfigService,
+    {
+      seedDefaults: jest.fn(),
+    } as unknown as import('../inventory/config/inventory-config.service').InventoryConfigService,
     m.passwords as unknown as PasswordService,
     m.tokens as unknown as TokenService,
     m.audit as unknown as AuditService,
