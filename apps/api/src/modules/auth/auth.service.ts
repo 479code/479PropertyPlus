@@ -8,6 +8,7 @@ import { type Membership } from '@prisma/client';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { CrmConfigService } from '../crm/config/crm-config.service';
 import { InventoryConfigService } from '../inventory/config/inventory-config.service';
 import { OrganizationInviteService } from '../invites/organization-invite.service';
 import { MembershipRepository } from '../membership/membership.repository';
@@ -58,6 +59,7 @@ export class AuthService {
     private readonly invites: OrganizationInviteService,
     private readonly propertyConfig: PropertyConfigService,
     private readonly inventoryConfig: InventoryConfigService,
+    private readonly crmConfig: CrmConfigService,
     private readonly passwords: PasswordService,
     private readonly tokens: TokenService,
     private readonly audit: AuditService,
@@ -112,6 +114,7 @@ export class AuthService {
       await this.rbac.assignRole(tx, createdMembership.id, ownerRole.id);
       await this.propertyConfig.seedDefaults(tx, createdOrg.id, createdUser.id);
       await this.inventoryConfig.seedDefaults(tx, createdOrg.id, createdUser.id);
+      await this.crmConfig.seedDefaults(tx, createdOrg.id, createdUser.id);
       return { user: createdUser, organization: createdOrg, membership: createdMembership };
     });
 

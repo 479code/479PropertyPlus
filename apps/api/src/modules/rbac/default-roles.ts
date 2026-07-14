@@ -18,6 +18,13 @@ const managerPermissions = PERMISSION_KEYS.filter((k) => {
   if (resource.startsWith('property_')) return true;
   if (['building', 'floor', 'unit'].includes(resource)) return true;
   if (resource.startsWith('building_') || resource.startsWith('unit_')) return true;
+  if (['person', 'company', 'owner', 'agent', 'tenant'].includes(resource)) return true;
+  if (
+    resource.startsWith('person_') ||
+    resource === 'contact_history' ||
+    resource === 'emergency_contact'
+  )
+    return true;
   if (resource === 'geography') return action === 'read';
   if (resource === 'payment') return ['create', 'read', 'update'].includes(action);
   if (resource === 'report') return true;

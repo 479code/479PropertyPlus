@@ -11,6 +11,7 @@ const DEFAULT_PREFIX: Record<NumberedEntity, string> = {
   BUILDING: 'BLD',
   FLOOR: 'FLR',
   UNIT: 'UNIT',
+  PERSON: 'PER',
   TENANT: 'TEN',
   LEASE: 'LSE',
   INVOICE: 'INV',

@@ -65,6 +65,7 @@ enum NumberedEntity {
   BUILDING
   FLOOR
   UNIT
+  PERSON
   TENANT
   LEASE
   INVOICE
@@ -334,6 +335,12 @@ model Organization {
   buildings        Building[]
   floors           Floor[]
   units            Unit[]
+
+  // CRM relations
+  personTypes    PersonType[]
+  personTags     PersonTag[]
+  people         Person[]
+  companies      Company[]
 
   @@index([deletedAt])
   @@map("organizations")
@@ -1312,4 +1319,348 @@ model UnitOccupancyHistory {
 
   @@index([unitId])
   @@map("unit_occupancy_history")
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Milestone 005 — Tenant, Contact & CRM Management
+// ════════════════════════════════════════════════════════════════════
+
+enum PersonDocumentType {
+  PASSPORT
+  NATIONAL_ID
+  DRIVERS_LICENCE
+  UTILITY_BILL
+  EMPLOYMENT_LETTER
+  COMPANY_REGISTRATION
+  TAX_CERTIFICATE
+  OTHER
+}
+
+enum ContactHistoryType {
+  CALL
+  EMAIL
+  MEETING
+  NOTE
+  SMS
+  WHATSAPP
+}
+
+/// Configurable, organization-scoped role vocabulary (Tenant, Owner, Agent, etc).
+/// A Person may hold several of these simultaneously via PersonRole.
+model PersonType {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name         String
+  description  String?
+  displayOrder Int     @default(0)
+  isActive     Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
+  deletedAt DateTime?
+
+  roles PersonRole[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("person_types")
+}
+
+/// Configurable, organization-scoped tag vocabulary (VIP, Blacklisted, etc).
+model PersonTag {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name         String
+  color        String?
+  displayOrder Int     @default(0)
+  isActive     Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
+  deletedAt DateTime?
+
+  assignments PersonTagAssignment[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("person_tags")
+}
+
+/// The single, canonical record for any individual known to an organization —
+/// tenants, owners, agents, guarantors, and emergency contacts are all Persons,
+/// distinguished by which PersonRole rows they hold (never duplicated per role).
+model Person {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  personCode String
+  slug       String
+
+  firstName  String
+  middleName String?
+  lastName   String
+  fullName   String
+
+  gender               String?
+  dateOfBirth          DateTime?
+  maritalStatus        String?
+  nationality          String?
+  occupation           String?
+
+  email          String?
+  phone          String?
+  alternatePhone String?
+  profilePhoto   String?
+
+  address    String?
+  city       String?
+  state      String?
+  country    String?
+  postalCode String?
+
+  identificationType     String?
+  identificationNumber   String?
+  identificationExpiry   DateTime?
+  taxIdentificationNumber String?
+
+  notes    String?
+  isActive Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
+  deletedAt DateTime?
+
+  roles              PersonRole[]
+  tenantProfile      TenantProfile?
+  ownerProfile       OwnerProfile?
+  agentProfile       AgentProfile?
+  documents          PersonDocument[]
+  tagAssignments     PersonTagAssignment[]
+  contactHistory     ContactHistoryEntry[]
+  emergencyContactsOf   EmergencyContact[] @relation("EmergencyContactOwner")
+  emergencyContactEntries EmergencyContact[] @relation("EmergencyContactPerson")
+  companyContactFor  Company[]
+
+  @@unique([organizationId, personCode])
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+  @@index([deletedAt])
+  @@index([email])
+  @@index([phone])
+  @@map("people")
+}
+
+/// Junction table: which roles (PersonType) a Person currently holds.
+model PersonRole {
+  id           String     @id @default(uuid()) @db.Uuid
+  personId     String     @db.Uuid
+  person       Person     @relation(fields: [personId], references: [id], onDelete: Cascade)
+  personTypeId String     @db.Uuid
+  personType   PersonType @relation(fields: [personTypeId], references: [id])
+
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@unique([personId, personTypeId])
+  @@index([personId])
+  @@index([personTypeId])
+  @@map("person_roles")
+}
+
+/// A corporate entity — the counterpart for corporate tenants, corporate owners, etc.
+model Company {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  companyName        String
+  registrationNumber String?
+  taxNumber          String?
+  email              String?
+  phone              String?
+  website            String?
+  address            String?
+
+  contactPersonId String? @db.Uuid
+  contactPerson   Person? @relation(fields: [contactPersonId], references: [id], onDelete: SetNull)
+
+  notes String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
+  deletedAt DateTime?
+
+  tenantProfiles TenantProfile[]
+
+  @@index([organizationId])
+  @@index([deletedAt])
+  @@index([contactPersonId])
+  @@map("companies")
+}
+
+model TenantProfile {
+  id       String @id @default(uuid()) @db.Uuid
+  personId String @unique @db.Uuid
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  employmentStatus       String?
+  employer               String?
+  monthlyIncome          Decimal? @db.Decimal(18, 2)
+  preferredPaymentMethod String?
+  preferredCommunication String?
+  riskRating             String?
+  creditScore            Int?
+  status                 String?
+
+  /// Convenience default for future lease creation flows — NOT an active
+  /// guarantee record. Real guarantees are GuarantorAssignment (Milestone 006),
+  /// scoped to a specific Lease. This is only a suggested default person to
+  /// pre-fill when starting that flow.
+  defaultGuarantorPersonId String? @db.Uuid
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
+  deletedAt DateTime?
+
+  @@index([companyId])
+  @@map("tenant_profiles")
+}
+
+model AgentProfile {
+  id       String @id @default(uuid()) @db.Uuid
+  personId String @unique @db.Uuid
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  agencyName     String?
+  commissionRate Decimal? @db.Decimal(5, 2)
+  licenceNumber  String?
+  territory      String?
+  notes          String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
+  deletedAt DateTime?
+
+  @@map("agent_profiles")
+}
+
+model OwnerProfile {
+  id       String @id @default(uuid()) @db.Uuid
+  personId String @unique @db.Uuid
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  ownershipType    String?
+  /// Metadata only — no raw bank account numbers should be stored without
+  /// dedicated encryption-at-rest handling; kept as free-form Json for now
+  /// (e.g. { bankName, accountName } — NOT full account numbers).
+  bankDetails      Json?
+  payoutPreference String?
+  notes            String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
+  deletedAt DateTime?
+
+  @@map("owner_profiles")
+}
+
+/// A Person→Person relationship: `person` designates `contactPerson` as their
+/// emergency contact.
+model EmergencyContact {
+  id     String @id @default(uuid()) @db.Uuid
+
+  personId String @db.Uuid
+  person   Person @relation("EmergencyContactOwner", fields: [personId], references: [id], onDelete: Cascade)
+
+  contactPersonId String @db.Uuid
+  contactPerson   Person @relation("EmergencyContactPerson", fields: [contactPersonId], references: [id], onDelete: Cascade)
+
+  relationship String
+  priority     Int     @default(0)
+  isPrimary    Boolean @default(false)
+  notes        String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([personId, contactPersonId])
+  @@index([personId])
+  @@index([contactPersonId])
+  @@map("emergency_contacts")
+}
+
+model PersonDocument {
+  id       String @id @default(uuid()) @db.Uuid
+  personId String @db.Uuid
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  documentType PersonDocumentType
+  name         String
+  url          String
+  description  String?
+  uploadedBy   String?            @db.Uuid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([personId])
+  @@index([documentType])
+  @@map("person_documents")
+}
+
+model PersonTagAssignment {
+  id       String    @id @default(uuid()) @db.Uuid
+  personId String    @db.Uuid
+  person   Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  tagId    String    @db.Uuid
+  tag      PersonTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([personId, tagId])
+  @@index([tagId])
+  @@map("person_tag_assignments")
+}
+
+/// Every recorded interaction (call, email, meeting, note, SMS, WhatsApp)
+/// becomes a timeline event for a Person.
+model ContactHistoryEntry {
+  id       String @id @default(uuid()) @db.Uuid
+  personId String @db.Uuid
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  type       ContactHistoryType
+  subject    String?
+  notes      String?
+  occurredAt DateTime            @default(now())
+  performedBy String?            @db.Uuid
+
+  createdAt DateTime @default(now())
+
+  @@index([personId])
+  @@index([type])
+  @@index([occurredAt])
+  @@map("contact_history_entries")
 }

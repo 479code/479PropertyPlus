@@ -10,6 +10,7 @@ import { PermissionsGuard } from './common/auth/permissions.guard';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ConfigurationModule } from './modules/config/configuration.module';
+import { CrmModule } from './modules/crm/crm.module';
 import { GeoModule } from './modules/geo/geo.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { InvitesModule } from './modules/invites/invites.module';
@@ -49,6 +50,7 @@ import { PrismaModule } from './prisma/prisma.module';
     GeoModule,
     PropertyModule,
     InventoryModule,
+    CrmModule,
   ],
   controllers: [AppController],
   providers: [
