@@ -10,9 +10,21 @@ import { BuildingsListPage } from './pages/buildings/BuildingsListPage';
 import { CreateBuildingPage } from './pages/buildings/CreateBuildingPage';
 import { EditBuildingPage } from './pages/buildings/EditBuildingPage';
 import { ComingSoonPage } from './pages/ComingSoonPage';
+import { CompaniesListPage } from './pages/companies/CompaniesListPage';
+import { CompanyDetailsPage } from './pages/companies/CompanyDetailsPage';
+import { CreateCompanyPage } from './pages/companies/CreateCompanyPage';
+import { CrmConfigPage } from './pages/crm-config/CrmConfigPage';
+import { CrmDashboardPage } from './pages/crm-dashboard/CrmDashboardPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { InventoryConfigPage } from './pages/inventory-config/InventoryConfigPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { AgentListPage } from './pages/people/AgentListPage';
+import { AllPeoplePage } from './pages/people/AllPeoplePage';
+import { CreatePersonPage } from './pages/people/CreatePersonPage';
+import { EditPersonPage } from './pages/people/EditPersonPage';
+import { OwnerListPage } from './pages/people/OwnerListPage';
+import { PersonDetailsPage } from './pages/people/PersonDetailsPage';
+import { TenantListPage } from './pages/people/TenantListPage';
 import { PropertiesListPage } from './pages/properties/PropertiesListPage';
 import { PropertyInventoryDashboardPage } from './pages/properties/PropertyInventoryDashboardPage';
 import { CreateUnitPage } from './pages/units/CreateUnitPage';
@@ -63,6 +75,19 @@ function App() {
         <Route path="buildings/:id" element={<BuildingDetailsPage />} />
         <Route path="buildings/:id/edit" element={<EditBuildingPage />} />
         <Route path="inventory-config" element={<InventoryConfigPage />} />
+
+        <Route path="people" element={<AllPeoplePage />} />
+        <Route path="people/new" element={<CreatePersonPage />} />
+        <Route path="people/:id" element={<PersonDetailsPage />} />
+        <Route path="people/:id/edit" element={<EditPersonPage />} />
+        <Route path="tenants" element={<TenantListPage />} />
+        <Route path="owners" element={<OwnerListPage />} />
+        <Route path="agents" element={<AgentListPage />} />
+        <Route path="companies" element={<CompaniesListPage />} />
+        <Route path="companies/new" element={<CreateCompanyPage />} />
+        <Route path="companies/:id" element={<CompanyDetailsPage />} />
+        <Route path="crm-config" element={<CrmConfigPage />} />
+        <Route path="crm-dashboard" element={<CrmDashboardPage />} />
       </Route>
 
       <Route path="/404" element={<NotFoundPage />} />

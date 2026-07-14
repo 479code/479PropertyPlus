@@ -1,5 +1,18 @@
 import { cn } from '@479property/ui';
-import { Building2, LayoutDashboard, Layers, Home, Settings, Tags, DoorOpen } from 'lucide-react';
+import {
+  Briefcase,
+  Building,
+  Building2,
+  DoorOpen,
+  Home,
+  IdCard,
+  Layers,
+  LayoutDashboard,
+  Settings,
+  Tags,
+  UserCheck,
+  Users,
+} from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
 interface NavItem {
@@ -15,6 +28,13 @@ const navItems: NavItem[] = [
   { to: '/buildings', label: 'Buildings', icon: Building2 },
   { to: '/units', label: 'Units', icon: DoorOpen },
   { to: '/inventory-config', label: 'Inventory Setup', icon: Tags },
+  { to: '/people', label: 'People', icon: Users },
+  { to: '/tenants', label: 'Tenants', icon: IdCard },
+  { to: '/owners', label: 'Owners', icon: Home },
+  { to: '/agents', label: 'Agents', icon: UserCheck },
+  { to: '/companies', label: 'Companies', icon: Building },
+  { to: '/crm-dashboard', label: 'CRM Dashboard', icon: Briefcase },
+  { to: '/crm-config', label: 'CRM Setup', icon: Tags },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
