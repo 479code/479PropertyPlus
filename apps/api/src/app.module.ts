@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import { AppController } from './app.controller';
@@ -14,6 +16,7 @@ import { CrmModule } from './modules/crm/crm.module';
 import { GeoModule } from './modules/geo/geo.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { InvitesModule } from './modules/invites/invites.module';
+import { LeaseModule } from './modules/lease/lease.module';
 import { MembershipModule } from './modules/membership/membership.module';
 import { OrganizationModule } from './modules/organization/organization.module';
 import { PropertyModule } from './modules/property/property.module';
@@ -27,6 +30,8 @@ import { PrismaModule } from './prisma/prisma.module';
       isGlobal: true,
       envFilePath: ['.env', '../../.env'],
     }),
+    EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -51,6 +56,7 @@ import { PrismaModule } from './prisma/prisma.module';
     PropertyModule,
     InventoryModule,
     CrmModule,
+    LeaseModule,
   ],
   controllers: [AppController],
   providers: [

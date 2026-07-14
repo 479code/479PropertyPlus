@@ -15,7 +15,7 @@ const readOnly = PERMISSION_KEYS.filter((k) => k.endsWith(':read') || k.endsWith
 const managerPermissions = PERMISSION_KEYS.filter((k) => {
   const [resource, action] = k.split(':');
   if (['property', 'tenant', 'lease'].includes(resource)) return true;
-  if (resource.startsWith('property_')) return true;
+  if (resource.startsWith('property_') || resource.startsWith('lease_')) return true;
   if (['building', 'floor', 'unit'].includes(resource)) return true;
   if (resource.startsWith('building_') || resource.startsWith('unit_')) return true;
   if (['person', 'company', 'owner', 'agent', 'tenant'].includes(resource)) return true;

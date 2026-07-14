@@ -878,6 +878,7 @@ model Property {
 
   buildings Building[]
   units     Unit[]
+  leases    Lease[]
 
   @@unique([organizationId, propertyCode])
   @@unique([organizationId, slug])
@@ -1130,6 +1131,7 @@ model Building {
 
   floors Floor[]
   units  Unit[]
+  leases Lease[]
 
   @@unique([organizationId, buildingCode])
   @@index([organizationId])
@@ -1226,6 +1228,7 @@ model Unit {
   documents         UnitDocument[]
   timeline          UnitTimeline[]
   occupancyHistory  UnitOccupancyHistory[]
+  leases            Lease[]
 
   @@unique([organizationId, unitCode])
   @@unique([organizationId, slug])
@@ -1451,6 +1454,9 @@ model Person {
   emergencyContactsOf   EmergencyContact[] @relation("EmergencyContactOwner")
   emergencyContactEntries EmergencyContact[] @relation("EmergencyContactPerson")
   companyContactFor  Company[]
+  primaryTenantLeases Lease[] @relation("PrimaryTenantLeases")
+  leaseTenancies     LeaseTenant[]
+  leaseGuarantees    LeaseGuarantor[]
 
   @@unique([organizationId, personCode])
   @@unique([organizationId, slug])
@@ -1663,4 +1669,304 @@ model ContactHistoryEntry {
   @@index([type])
   @@index([occurredAt])
   @@map("contact_history_entries")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Milestone 006 — Lease & Occupancy Management
+// ─────────────────────────────────────────────────────────────────────────
+
+enum LeaseTenantRole {
+  PRIMARY
+  CO_TENANT
+  OCCUPANT
+  AUTHORIZED_REPRESENTATIVE
+}
+
+enum LeaseDocumentType {
+  LEASE_AGREEMENT
+  SIGNED_CONTRACT
+  ADDENDUM
+  IDENTITY_DOCUMENT
+  INSPECTION_REPORT
+  HANDOVER_REPORT
+  OTHER
+}
+
+enum LeaseTimelineEvent {
+  CREATED
+  SUBMITTED
+  APPROVED
+  REJECTED
+  SIGNED
+  ACTIVATED
+  RENEWAL_INITIATED
+  RENEWED
+  EXTENDED
+  EXPIRED
+  TERMINATED
+  ARCHIVED
+}
+
+/// Org-scoped, seeded: Residential, Commercial, Office, Warehouse, Short Stay,
+/// Monthly, Annual, Corporate, Staff Accommodation.
+model LeaseType {
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String  @db.Uuid
+  name           String
+  description    String?
+  displayOrder   Int     @default(0)
+  isActive       Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
+  deletedAt DateTime?
+
+  leases Lease[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("lease_types")
+}
+
+/// Org-scoped, seeded: Weekly, Monthly, Quarterly, Bi-Annual, Annual, Custom.
+model PaymentFrequency {
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String  @db.Uuid
+  name           String
+  description    String?
+  displayOrder   Int     @default(0)
+  isActive       Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
+  deletedAt DateTime?
+
+  leases Lease[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("payment_frequencies")
+}
+
+/// Org-scoped lease lifecycle states. `key` is the stable, code-referenced
+/// identifier (DRAFT, PENDING_APPROVAL, REJECTED, AWAITING_SIGNATURE, ACTIVE,
+/// RENEWAL_PENDING, EXPIRED, TERMINATED, ARCHIVED); `name` is the editable
+/// display label. `blocksUnitAvailability` / `countsAsOccupancy` drive the
+/// occupancy engine and overlap validation — never hardcoded by key in
+/// business logic, always read from these flags.
+model LeaseStatus {
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String  @db.Uuid
+  key            String
+  name           String
+  color          String?
+  description    String?
+  displayOrder   Int     @default(0)
+  isActive       Boolean @default(true)
+
+  blocksUnitAvailability Boolean @default(false)
+  countsAsOccupancy      Boolean @default(false)
+  /// System statuses back the state machine and must not be deleted (only relabeled/recolored).
+  isSystem               Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
+  deletedAt DateTime?
+
+  leases          Lease[]
+  fromTransitions LeaseStateTransition[] @relation("FromStatus")
+  toTransitions   LeaseStateTransition[] @relation("ToStatus")
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
+  @@map("lease_statuses")
+}
+
+/// Data-driven state machine edges, per the approved architecture: transitions
+/// are rows here, not a hardcoded switch statement, so they can be edited
+/// later without a code change.
+model LeaseStateTransition {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  fromStatusId   String @db.Uuid
+  toStatusId     String @db.Uuid
+
+  fromStatus LeaseStatus @relation("FromStatus", fields: [fromStatusId], references: [id], onDelete: Cascade)
+  toStatus   LeaseStatus @relation("ToStatus", fields: [toStatusId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([organizationId, fromStatusId, toStatusId])
+  @@index([organizationId])
+  @@map("lease_state_transitions")
+}
+
+model Lease {
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String  @db.Uuid
+  leaseNumber    String
+  leaseReference String?
+  slug           String
+
+  propertyId      String  @db.Uuid
+  buildingId      String? @db.Uuid
+  unitId          String  @db.Uuid
+  primaryTenantId String  @db.Uuid
+  leaseTypeId     String  @db.Uuid
+  leaseStatusId   String  @db.Uuid
+
+  property      Property         @relation(fields: [propertyId], references: [id])
+  building      Building?        @relation(fields: [buildingId], references: [id])
+  unit          Unit             @relation(fields: [unitId], references: [id])
+  primaryTenant Person           @relation("PrimaryTenantLeases", fields: [primaryTenantId], references: [id])
+  leaseType     LeaseType        @relation(fields: [leaseTypeId], references: [id])
+  leaseStatus   LeaseStatus      @relation(fields: [leaseStatusId], references: [id])
+
+  leaseStartDate DateTime
+  leaseEndDate   DateTime
+  moveInDate     DateTime?
+  moveOutDate    DateTime?
+
+  leaseDurationMonths Int?
+  renewalNoticeDays   Int?
+  gracePeriodDays     Int?
+
+  securityDeposit      Decimal? @db.Decimal(18, 2)
+  monthlyRent          Decimal? @db.Decimal(18, 2)
+  annualRent           Decimal? @db.Decimal(18, 2)
+  serviceCharge        Decimal? @db.Decimal(18, 2)
+  utilityCharge        Decimal? @db.Decimal(18, 2)
+  parkingCharge        Decimal? @db.Decimal(18, 2)
+  discount             Decimal? @db.Decimal(18, 2)
+  taxAmount            Decimal? @db.Decimal(18, 2)
+  totalRecurringAmount Decimal? @db.Decimal(18, 2)
+
+  paymentFrequencyId String?           @db.Uuid
+  paymentFrequency   PaymentFrequency? @relation(fields: [paymentFrequencyId], references: [id])
+  billingCycle       String?
+  nextInvoiceDate    DateTime?
+  autoRenew          Boolean           @default(false)
+
+  signedDate        DateTime?
+  terminationDate   DateTime?
+  terminationReason String?
+  notes             String?
+  isActive          Boolean   @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?   @db.Uuid
+  updatedBy String?   @db.Uuid
+  deletedAt DateTime?
+
+  tenants    LeaseTenant[]
+  guarantors LeaseGuarantor[]
+  documents  LeaseDocument[]
+  timeline   LeaseTimelineEntry[]
+  notesLog   LeaseNote[]
+
+  @@unique([organizationId, leaseNumber])
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+  @@index([unitId])
+  @@index([leaseStatusId])
+  @@index([primaryTenantId])
+  @@index([leaseStartDate])
+  @@index([leaseEndDate])
+  @@index([deletedAt])
+  @@map("leases")
+}
+
+model LeaseTenant {
+  id                  String           @id @default(uuid()) @db.Uuid
+  leaseId             String           @db.Uuid
+  personId            String           @db.Uuid
+  role                LeaseTenantRole  @default(CO_TENANT)
+  ownershipPercentage Decimal?         @db.Decimal(5, 2)
+
+  lease  Lease  @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  person Person @relation(fields: [personId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([leaseId, personId])
+  @@index([personId])
+  @@map("lease_tenants")
+}
+
+/// The deferred M005 "GuarantorAssignment", now buildable since Lease exists.
+model LeaseGuarantor {
+  id                   String   @id @default(uuid()) @db.Uuid
+  leaseId              String   @db.Uuid
+  personId             String   @db.Uuid
+  guaranteeType        String?
+  guaranteeAmount      Decimal? @db.Decimal(18, 2)
+  relationshipToTenant String?
+  status               String?
+  notes                String?
+
+  lease  Lease  @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  person Person @relation(fields: [personId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([leaseId, personId])
+  @@index([personId])
+  @@map("lease_guarantors")
+}
+
+model LeaseDocument {
+  id           String            @id @default(uuid()) @db.Uuid
+  leaseId      String            @db.Uuid
+  documentType LeaseDocumentType
+  name         String
+  url          String
+  description  String?
+  uploadedBy   String?           @db.Uuid
+
+  lease Lease @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([leaseId])
+  @@map("lease_documents")
+}
+
+model LeaseTimelineEntry {
+  id          String             @id @default(uuid()) @db.Uuid
+  leaseId     String             @db.Uuid
+  eventType   LeaseTimelineEvent
+  description String?
+  metadata    Json?
+  performedBy String?            @db.Uuid
+
+  lease Lease @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([leaseId])
+  @@map("lease_timeline_entries")
+}
+
+model LeaseNote {
+  id       String  @id @default(uuid()) @db.Uuid
+  leaseId  String  @db.Uuid
+  authorId String? @db.Uuid
+  note     String
+
+  lease Lease @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([leaseId])
+  @@map("lease_notes")
 }

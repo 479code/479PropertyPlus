@@ -6,6 +6,7 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from '../../common/auth/jwt.strategy';
 import { CrmModule } from '../crm/crm.module';
 import { InventoryModule } from '../inventory/inventory.module';
+import { LeaseModule } from '../lease/lease.module';
 import { OrganizationModule } from '../organization/organization.module';
 import { PropertyModule } from '../property/property.module';
 
@@ -23,6 +24,7 @@ import { TokenService } from './token.service';
     PropertyModule,
     InventoryModule,
     CrmModule,
+    LeaseModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

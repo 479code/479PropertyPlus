@@ -60,6 +60,13 @@ import { UnitService } from './unit/unit.service';
     UnitMediaService,
     InventorySummaryService,
   ],
-  exports: [InventoryConfigService, AvailabilityService],
+  exports: [
+    InventoryConfigService,
+    AvailabilityService,
+    UnitRepository,
+    UnitEventsRepository,
+    CountsService,
+    BuildingRepository,
+  ],
 })
 export class InventoryModule {}

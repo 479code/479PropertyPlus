@@ -67,6 +67,9 @@ function build(): { service: AuthService; m: Mocks } {
     {
       seedDefaults: jest.fn(),
     } as unknown as import('../crm/config/crm-config.service').CrmConfigService,
+    {
+      seedDefaults: jest.fn(),
+    } as unknown as import('../lease/config/lease-config.service').LeaseConfigService,
     m.passwords as unknown as PasswordService,
     m.tokens as unknown as TokenService,
     m.audit as unknown as AuditService,
