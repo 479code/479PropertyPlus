@@ -62,6 +62,6 @@ import { ProfileService } from './profiles/profile.service';
     ContactHistoryService,
     CrmDashboardService,
   ],
-  exports: [CrmConfigService],
+  exports: [CrmConfigService, PersonRepository],
 })
 export class CrmModule {}
