@@ -56,7 +56,15 @@ export class RbacRepository {
   ): Promise<{ count: number }> {
     return db.rolePermission.createMany({
       data: permissionIds.map((permissionId) => ({ roleId, permissionId })),
+      skipDuplicates: true,
     });
+  }
+
+  listOrganizationIds(): Promise<Array<{ id: string }>> {
+    return this.prisma.organization.findMany({
+      where: { deletedAt: null },
+      select: { id: true },
+    }) as Promise<Array<{ id: string }>>;
   }
 
   findRoleByKey(organizationId: string, key: string): Promise<Role | null> {
