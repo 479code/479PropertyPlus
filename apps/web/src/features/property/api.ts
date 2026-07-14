@@ -5,6 +5,10 @@ export interface PropertyRef {
   name: string;
   propertyCode: string;
   slug: string;
+  totalBuildings: number;
+  totalUnits: number;
+  occupiedUnits: number;
+  vacantUnits: number;
 }
 
 export interface Paginated<T> {

@@ -40,6 +40,10 @@ export function PropertiesListPage() {
               <CardContent className="p-6">
                 <p className="font-medium">{property.name}</p>
                 <p className="text-sm text-muted-foreground">{property.propertyCode}</p>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {property.totalBuildings} building{property.totalBuildings === 1 ? '' : 's'} ·{' '}
+                  {property.totalUnits} unit{property.totalUnits === 1 ? '' : 's'}
+                </p>
               </CardContent>
             </Card>
           ))}
