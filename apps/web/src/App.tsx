@@ -17,7 +17,18 @@ import { CrmConfigPage } from './pages/crm-config/CrmConfigPage';
 import { CrmDashboardPage } from './pages/crm-dashboard/CrmDashboardPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { InventoryConfigPage } from './pages/inventory-config/InventoryConfigPage';
+import { LeaseDashboardPage } from './pages/lease-dashboard/LeaseDashboardPage';
+import { AllLeasesPage } from './pages/leases/AllLeasesPage';
+import { LeaseConfigPage } from './pages/leases/config/LeaseConfigPage';
+import { EditLeasePage } from './pages/leases/EditLeasePage';
+import { ExpiringLeasesPage } from './pages/leases/ExpiringLeasesPage';
+import { LeaseApprovalsPage } from './pages/leases/LeaseApprovalsPage';
+import { LeaseDetailsPage } from './pages/leases/LeaseDetailsPage';
+import { LeaseRenewalsPage } from './pages/leases/LeaseRenewalsPage';
+import { TerminatedLeasesPage } from './pages/leases/TerminatedLeasesPage';
+import { CreateLeaseWizard } from './pages/leases/wizard/CreateLeaseWizard';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { OccupancyDashboardPage } from './pages/occupancy-dashboard/OccupancyDashboardPage';
 import { AgentListPage } from './pages/people/AgentListPage';
 import { AllPeoplePage } from './pages/people/AllPeoplePage';
 import { CreatePersonPage } from './pages/people/CreatePersonPage';
@@ -88,6 +99,18 @@ function App() {
         <Route path="companies/:id" element={<CompanyDetailsPage />} />
         <Route path="crm-config" element={<CrmConfigPage />} />
         <Route path="crm-dashboard" element={<CrmDashboardPage />} />
+
+        <Route path="leases" element={<AllLeasesPage />} />
+        <Route path="leases/new" element={<CreateLeaseWizard />} />
+        <Route path="leases/approvals" element={<LeaseApprovalsPage />} />
+        <Route path="leases/renewals" element={<LeaseRenewalsPage />} />
+        <Route path="leases/expiring" element={<ExpiringLeasesPage />} />
+        <Route path="leases/terminated" element={<TerminatedLeasesPage />} />
+        <Route path="leases/:id" element={<LeaseDetailsPage />} />
+        <Route path="leases/:id/edit" element={<EditLeasePage />} />
+        <Route path="lease-dashboard" element={<LeaseDashboardPage />} />
+        <Route path="lease-config" element={<LeaseConfigPage />} />
+        <Route path="occupancy-dashboard" element={<OccupancyDashboardPage />} />
       </Route>
 
       <Route path="/404" element={<NotFoundPage />} />
